@@ -1,8 +1,14 @@
 const lynx = require('lynx');
 
+const envMode = process.env.ENV_MODE
+// For debug purpose only.
+console.log("Mode: ",envMode )
+
+const statsd = process.env.STATSD_HOST || "statsd"
+const port = parseInt(process.env.STATSD_PORT) || 8125
+
 // instantiate a metrics client
-//  Note: the metric hostname is hardcoded here
-const metrics = new lynx('localhost', 8125);
+const metrics = new lynx(statsd, port);
 
 // sleep for a given number of milliseconds
 function sleep(ms) {

@@ -42,3 +42,9 @@ In case you deploy it to any cloud platforms, please send us instructions & rele
     docker build -t my-app --build-arg MODE=production  .
     ```
 - For additional build config according to evironment type (stage,production), use the $MODE in the Dockerfile.
+
+2. Docker compose file
+``` 
+docker-compose up --build myapp statsd
+```
+This way docker compose will always build the image before running the containers. Otherwise compose will re-use the already built image.
