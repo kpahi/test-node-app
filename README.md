@@ -28,3 +28,17 @@ Project root has [`index.js`](/index.js) file. It simulates a simple app that ru
 Email us your Github repo. We expect meaningful git commits, ideally one commit per exercise with commit messages clearly communicating the intent.
 
 In case you deploy it to any cloud platforms, please send us instructions & relevant IAM user credentials.
+
+
+## Guide
+1. Docker file
+- For development mode, use volume mount inside the container. This way user don't have to install node,  nvm and other packages in their local machine.
+  ```
+  docker run --rm -it --name myTestApp \
+  -v $PWD:/usr/src/app -w /usr/src/app \
+  ```
+- For building image:
+    ``` 
+    docker build -t my-app --build-arg MODE=production  .
+    ```
+- For additional build config according to evironment type (stage,production), use the $MODE in the Dockerfile.
