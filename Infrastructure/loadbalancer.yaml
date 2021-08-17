@@ -1,0 +1,68 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'VPC with two public subnets in two different availability zones'
+
+Parameters:
+  EnvironmentName:
+    Description: An environment name to which the resource belongs to
+    Type: String
+    Default: test
+      
+  VPC:
+    Type: AWS::EC2::VPC::Id
+    Default: vpc-08a07e173d2095140
+  
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet::Id
+    Default: subnet-08d1cc5d1b3b92f3b
+    
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet::Id
+    Default: subnet-09a1ad1e991f5e62f
+    
+  LoadBalancerPort:
+    Type: Number
+    Default: 80
+
+Resources:
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Join ['', [!Ref EnvironmentName, LoadBalancerSecurityGroup]]
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref LoadBalancerPort
+          ToPort: !Ref LoadBalancerPort
+          CidrIp: 0.0.0.0/0
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: 60
+      Name: !Join ['', [!Ref EnvironmentName, LoadBalancer]]
+      Scheme: internet-facing
+      SecurityGroups:
+        - !Ref LoadBalancerSecurityGroup
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+        
+Outputs:
+  ALBUrl:
+    Description: The url of the load balancer
+    Value: !GetAtt 'LoadBalancer.DNSName'
+    Export:
+      Name: !Join [ ':', [ !Ref EnvironmentName, 'LoadBalancer', 'Url' ] ]
+
+  ALBHostedZoneID:
+    Description: The Hosted Zone ID of the load balancer
+    Value: !GetAtt 'LoadBalancer.CanonicalHostedZoneID'
+    Export:
+      Name: !Join [ ':', [ !Ref EnvironmentName, 'LoadBalancer', 'HostedZoneID' ] ]
+
+  LoadBalancerArn:
+    Description: The ARN of the load balancer
+    Value: !Ref LoadBalancer
+    Export:
+      Name: !Sub "${EnvironmentName}:LoadBalancerArn"

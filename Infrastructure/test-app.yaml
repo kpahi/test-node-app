@@ -1,0 +1,192 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Service Definition
+Parameters:
+  EnvironmentName:
+    Type: String
+    Description: A label for the environment that this cloudformation will be part of
+  
+  EnvironmentType:
+    Type: String
+    Default: production
+    
+  VPC:
+    Type: AWS::EC2::VPC::Id
+    Default: vpc-08a07e173d2095140
+  
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet::Id
+    Default: subnet-08d1cc5d1b3b92f3b
+    
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet::Id
+    Default: subnet-09a1ad1e991f5e62f
+    
+  Image:
+    Type: String
+    Default: 831351729356.dkr.ecr.us-east-1.amazonaws.com/my-test-app:v1
+    
+  ServiceName:
+    Type: String
+    Default: test-app
+
+  ContainerCpu:
+    Type: Number
+    Default: 256
+    Description: How much CPU to give the container. 1024 is 1 CPU
+
+  ContainerMemory:
+    Type: Number
+    Default: 512
+    Description: How much memory in megabytes to give the container
+
+  DesiredCount:
+    Type: Number
+    Default: 1
+    Description: How many copies of the service task to run
+
+  # for autoscaling
+  MinContainers:
+    Type: Number
+    Default: 2
+  # for autoscaling
+  MaxContainers:
+    Type: Number
+    Default: 10
+  # target CPU utilization (%)
+  AutoScalingTargetValue:
+    Type: Number
+    Default: 70
+    
+Resources:
+  ContainerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Access to the Fargate containers 
+      VpcId: !Ref VPC
+      Tags:
+        - Key: ResourceType
+          Value: securitygroup
+
+  # A log group for storing the container logs for this service
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Join ['/', ['/aws', 'ecs', !Ref EnvironmentName, !Ref ServiceName]]
+      RetentionInDays: 7
+
+  # A role needed by ECS
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join ['', [!Ref ServiceName, ExecutionRole]]
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+        
+  # A role for the containers
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join ['', [!Ref ServiceName, TaskRole]]
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+            
+  # A role needed for auto scaling
+  AutoScalingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join ['', [!Ref ServiceName, AutoScalingRole]]
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceAutoscaleRole'
+        
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    DependsOn: LogGroup
+    Properties:
+      Family: !Join ['', [!Ref ServiceName, TaskDefinition]]
+      Cpu: !Ref ContainerCpu
+      Memory: !Ref ContainerMemory
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: !Ref ExecutionRole
+      TaskRoleArn: !Ref TaskRole
+      ContainerDefinitions:
+        - Name: !Ref ServiceName
+          Cpu: !Ref ContainerCpu
+          Memory: !Ref ContainerMemory
+          Image: !Ref Image 
+          Environment:
+            - Name: ENV_MODE
+              Value: !Ref EnvironmentType             
+            - Name: STATSD_HOST
+              Value: 3.90.68.3
+          LogConfiguration:
+            LogDriver: 'awslogs'
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: !Ref ServiceName
+
+  Service:
+    Type: AWS::ECS::Service
+    Properties:
+      PlatformVersion: '1.4.0'
+      ServiceName: !Ref ServiceName
+      Cluster:
+        Fn::ImportValue:
+          !Join [':', [!Ref EnvironmentName, 'ClusterName']]
+      LaunchType: FARGATE
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+      DesiredCount: !Ref DesiredCount
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups: [!Ref ContainerSecurityGroup]
+          Subnets:
+            - !Ref PublicSubnet1
+            - !Ref PublicSubnet2
+      TaskDefinition: !Ref TaskDefinition
+
+  # User: =kritishpahi@gmail.com is not authorized to perform: application-autoscaling:DescribeScalableTargets with an explicit deny 
+  # AWS Account with limited access.
+  # AutoScalingTarget:
+  #   Type: AWS::ApplicationAutoScaling::ScalableTarget
+  #   Properties:
+  #     MinCapacity: !Ref MinContainers
+  #     MaxCapacity: !Ref MaxContainers
+  #     ResourceId: !Join ['/', [service, !GetAtt Service.Name]]
+  #     ScalableDimension: ecs:service:DesiredCount
+  #     ServiceNamespace: ecs
+  #     # "The Amazon Resource Name (ARN) of an AWS Identity and Access Management (IAM) role that allows Application Auto Scaling to modify your scalable target."
+  #     RoleARN: !GetAtt AutoScalingRole.Arn
+  # AutoScalingPolicy:
+  #   Type: AWS::ApplicationAutoScaling::ScalingPolicy
+  #   Properties:
+  #     PolicyName: !Join ['', [!Ref ServiceName, AutoScalingPolicy]]
+  #     PolicyType: TargetTrackingScaling
+  #     ScalingTargetId: !Ref AutoScalingTarget
+  #     TargetTrackingScalingPolicyConfiguration:
+  #       PredefinedMetricSpecification:
+  #         PredefinedMetricType: ECSServiceAverageCPUUtilization
+  #       ScaleInCooldown: 10
+  #       ScaleOutCooldown: 10
+  #       # Keep things at or lower than 50% CPU utilization, for example
+  #       TargetValue: !Ref AutoScalingTargetValue

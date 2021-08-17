@@ -31,7 +31,7 @@ In case you deploy it to any cloud platforms, please send us instructions & rele
 
 
 ## Guide
-1. Docker file
+### 1. Docker file
 - For development mode, use volume mount inside the container. This way user don't have to install node,  nvm and other packages in their local machine.
   ```
   docker run --rm -it --name myTestApp \
@@ -43,8 +43,33 @@ In case you deploy it to any cloud platforms, please send us instructions & rele
     ```
 - For additional build config according to evironment type (stage,production), use the $MODE in the Dockerfile.
 
-2. Docker compose file
+### 2. Docker compose file
 ``` 
 docker-compose up --build myapp statsd
 ```
 This way docker compose will always build the image before running the containers. Otherwise compose will re-use the already built image.
+
+### 3. Infrastrcture for the deployment.
+The following are dependent infrastructure in order:
+```
+A. VPC   
+
+B. Application Load balancer <br> `make `
+
+C. Elastic Container Service (ECS) Cluster 
+
+D. IaC for Graphite Statsd Service in ECS
+
+E. IaC for Node App as Service in ECS
+```
+
+### 4. Deploy in AWS. (in the same order as above.)
+
+```
+A. make create-vpc-stack
+B. make create-loadbalancer-stack
+C. make create-ecs-cluster-stack
+D. make create-graphite-statsd-service
+E. make create-test-app-service
+
+```
