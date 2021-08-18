@@ -25,6 +25,10 @@ Parameters:
     Type: String
     Default: 831351729356.dkr.ecr.us-east-1.amazonaws.com/my-test-app:v1
     
+  StatsdAPI:
+    Type: String
+    Default: team-a-nlb-2fc4647ddf8c2dda.elb.us-east-1.amazonaws.com
+    
   ServiceName:
     Type: String
     Default: test-app
@@ -135,7 +139,7 @@ Resources:
             - Name: ENV_MODE
               Value: !Ref EnvironmentType             
             - Name: STATSD_HOST
-              Value: 172.31.86.233
+              Value: !Ref StatsdAPI
           LogConfiguration:
             LogDriver: 'awslogs'
             Options:
