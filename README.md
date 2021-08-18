@@ -30,7 +30,7 @@ Email us your Github repo. We expect meaningful git commits, ideally one commit 
 In case you deploy it to any cloud platforms, please send us instructions & relevant IAM user credentials.
 
 
-## Guide
+## Guide for Exercise.
 ### 1. Docker file
 - For development mode, use volume mount inside the container. This way user don't have to install node,  nvm and other packages in their local machine.
   ```
@@ -54,7 +54,7 @@ The following are dependent infrastructure in order:
 ```
 A. VPC   
 
-B. Application Load balancer <br> `make `
+B. Application Load balancer
 
 C. Elastic Container Service (ECS) Cluster 
 
@@ -63,6 +63,7 @@ D. IaC for Graphite Statsd Service in ECS
 E. IaC for Node App as Service in ECS
 ```
 
+![Architecture diagram](Diagram/test-node-app.png)
 ### 4. Deploy in AWS. (in the same order as above.)
 
 ```
