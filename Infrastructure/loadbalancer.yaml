@@ -66,3 +66,9 @@ Outputs:
     Value: !Ref LoadBalancer
     Export:
       Name: !Sub "${EnvironmentName}:LoadBalancerArn"
+      
+  ALBSecurityGroup:
+    Description: The Security group of the load balancer
+    Value: !GetAtt LoadBalancerSecurityGroup.GroupId
+    Export:
+      Name: !Join [ ':', [ !Ref EnvironmentName, 'LoadBalancer', 'SG' ] ]

@@ -69,16 +69,23 @@ Resources:
   ContainerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Access to the Fargate containers 
+      GroupDescription: Access to the graphite-statsd fargate container 
       VpcId: !Ref VPC
-      SecurityGroupIngress:
-        CidrIp: 0.0.0.0/0
-        IpProtocol: tcp
-        FromPort: 80
-        ToPort: 80
       Tags:
         - Key: ResourceType
           Value: securitygroup
+          
+  SecurityGroupIngressFromALB:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Ingress from ALB to graphite server
+      GroupId: !Ref ContainerSecurityGroup
+      IpProtocol: tcp
+      SourceSecurityGroupId: 
+        Fn::ImportValue:
+            !Join [':', [!Ref EnvironmentName, 'LoadBalancer', 'SG' ]]
+      FromPort: 80
+      ToPort: 80
    
   SecurityGroupIngressFromNodeApp:
     Type: AWS::EC2::SecurityGroupIngress
@@ -86,7 +93,7 @@ Resources:
       Description: Ingress from node app to statsd server
       GroupId: !Ref ContainerSecurityGroup
       IpProtocol: udp
-      CidrIp: 0.0.0.0/0
+      CidrIp: 172.31.0.0/16
       FromPort: 8125
       ToPort: 8125
 

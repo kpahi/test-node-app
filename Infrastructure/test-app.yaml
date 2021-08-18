@@ -135,7 +135,7 @@ Resources:
             - Name: ENV_MODE
               Value: !Ref EnvironmentType             
             - Name: STATSD_HOST
-              Value: 3.90.68.3
+              Value: 172.31.86.233
           LogConfiguration:
             LogDriver: 'awslogs'
             Options:
